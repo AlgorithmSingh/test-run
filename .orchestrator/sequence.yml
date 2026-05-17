@@ -1,5 +1,10 @@
 version: 1
 # Issues are attempted strictly top-to-bottom.
 # An entry is eligible only if every `requires` issue is in state DONE.
-# Populated after seed issues are created.
-sequence: []
+sequence:
+  - issue: 1
+    requires: []
+  - issue: 2
+    requires: [1]
+  - issue: 3
+    requires: [2]
