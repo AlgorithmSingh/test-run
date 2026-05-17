@@ -1,11 +1,15 @@
 repo: "AlgorithmSingh/test-run"
 default_branch: "main"
-sequence_file: ".orchestrator/sequence.yml"
+
+selection:
+  mode: "sequence"
+  sequence_file: ".orchestrator/sequence.yml"
 
 lanes:
   cloud:
-    submit_cmd: 'codex cloud exec --env {repo} "{prompt}"'
+    submit_cmd: 'codex cloud exec --env {env} "{prompt}"'
     status_cmd: 'codex cloud status {handle}'
+    env_id: ""
     concurrency: 3
     poll_interval_sec: 30
     turn_timeout_sec: 5400
@@ -14,10 +18,19 @@ lanes:
     build_cmd: 'claude --dangerously-skip-permissions -p "{prompt}"'
     workdir: "/Users/ankitsingh/Documents/Workspace/projects/test-run"
     turn_timeout_sec: 5400
-    required_host_binaries: ["git"]
 
-gate:
-  required_ci_checks: ["build", "test"]
+harness:
+  isolation: "local-tmp"
+  scratch_root: "/tmp/orch-harness"
+  clone_from: "remote"
+  render_paths: []
+  render_concurrency: 1
+  job_timeout_sec: 3600
+  image: ""
+
+review:
+  enabled: false
+  model_must_differ_from_build: true
 
 retries:
   max_attempts: 4
