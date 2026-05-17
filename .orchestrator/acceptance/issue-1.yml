@@ -1,0 +1,13 @@
+version: 1
+issue: 1
+independence: single-model
+criteria:
+  - id: hello-1-file-exists
+    kind: file
+    path: "hello-1.txt"
+    assert: exists
+    requires: []
+  - id: ci-test-passes
+    kind: ci_job
+    job: "test"
+    requires: []
