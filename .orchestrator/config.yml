@@ -1,0 +1,32 @@
+repo: "AlgorithmSingh/test-run"
+default_branch: "main"
+sequence_file: ".orchestrator/sequence.yml"
+
+lanes:
+  cloud:
+    submit_cmd: 'codex cloud exec --env {repo} "{prompt}"'
+    status_cmd: 'codex cloud status {handle}'
+    concurrency: 3
+    poll_interval_sec: 30
+    turn_timeout_sec: 5400
+    submit_timeout_sec: 120
+  founder:
+    build_cmd: 'claude --dangerously-skip-permissions -p "{prompt}"'
+    workdir: "/Users/ankitsingh/Documents/Workspace/projects/test-run"
+    turn_timeout_sec: 5400
+    required_host_binaries: ["git"]
+
+gate:
+  required_ci_checks: ["build", "test"]
+
+retries:
+  max_attempts: 4
+  dispatch_retries: 3
+  circuit_breaker_threshold: 5
+
+merge:
+  method: "squash"
+
+toolchain_pins:
+  claude_code: "2.1.x"
+  codex: "0.13x"
