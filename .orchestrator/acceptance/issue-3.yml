@@ -1,0 +1,14 @@
+version: 3
+issue: 3
+render_touching: false
+criteria:
+  - id: hello-3-file-sha256
+    kind: file
+    path: "hello-3.txt"
+    assert: sha256:1121cfccd5913f0a63fec40a6ffd44ea64f9dc135c66634ba001d10bcf4302a2
+    requires: []
+  - id: hello-3-content-bytes
+    kind: command
+    run: "test \"$(wc -c < hello-3.txt)\" -eq 2 && test \"$(cat hello-3.txt)\" = \"3\""
+    expect_exit: 0
+    requires: [bash, wc, cat]
