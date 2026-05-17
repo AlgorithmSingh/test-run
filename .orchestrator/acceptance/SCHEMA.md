@@ -1,13 +1,13 @@
-# Acceptance Checklist Schema
+# Acceptance Checklist Schema (v3)
 
-Canonical schema for `.orchestrator/acceptance/issue-{N}.yml`. The orchestrator's gate evaluator (`13-orchestrator/spec.md` §6) reads each file in this format. Files that do not conform are rejected (gate result FAIL with defect `non-machine-checkable criterion` or `missing/invalid acceptance file`).
+Canonical schema for `.orchestrator/acceptance/issue-{N}.yml`. The orchestrator's gate evaluator (spec §6) reads each file in this format inside a fresh clone of the pushed branch. Non-conforming files are rejected (gate FAIL with synthetic defect).
 
 ## Top-level
 
 ```yaml
-version: 1
+version: 3
 issue: <int>                       # GitHub issue number (must match filename)
-independence: cloud | single-model # set by orchestrator, not by agents
+render_touching: false             # set true if this change affects render code
 criteria:
   - <criterion>
   - <criterion>
@@ -15,17 +15,9 @@ criteria:
 
 ## Criteria
 
-Every criterion MUST be one of four `kind`s. Anything else is rejected as non-machine-checkable.
+Every criterion MUST be exactly one of five `kind`s. Anything else is rejected as non-machine-checkable.
 
-### `kind: command`
-
-```yaml
-- id: <slug>
-  kind: command
-  run: "<shell command>"
-  expect_exit: <int>
-  requires: [<host-binary>, ...]   # optional; empty list means no host deps
-```
+Every criterion may declare `requires: [<binary>, ...]` listing PATH binaries needed on the verification host. Missing → criterion `ENV_BLOCKED` (counted separately from code failures; does NOT consume a fix attempt).
 
 ### `kind: file`
 
@@ -37,37 +29,57 @@ Every criterion MUST be one of four `kind`s. Anything else is rejected as non-ma
   requires: []
 ```
 
-### `kind: ci_job`
+### `kind: command`
 
 ```yaml
 - id: <slug>
-  kind: ci_job
-  job: "<exact CI job name>"
-  requires: []
+  kind: command
+  run: "<shell command>"
+  expect_exit: <int>
+  requires: [<host-binary>, ...]
 ```
-
-The job's `conclusion` is read from the GitHub checks API for the PR head SHA. Conclusion `success` = PASS.
 
 ### `kind: artifact_hash`
 
 ```yaml
 - id: <slug>
   kind: artifact_hash
-  path: "<repo-relative path>"
-  sha256: "<hex>"
+  path: "<repo-relative path to produced artifact>"
+  sha256: "<hex sha256>"
   requires: []
 ```
 
-## Hard rules (enforced by the orchestrator)
+### `kind: artifact_oracle`
 
-1. Every criterion MUST be one of the four kinds above. "Agent confirms X", "looks correct", "presentation quality" are rejected.
-2. `id` is a stable slug; the orchestrator hashes criteria by `id` across attempts.
-3. **No loosening across fix attempts.** Removing a criterion, relaxing `expect_exit`, deleting `requires` entries, or changing `assert`/`sha256` to a weaker form is rejected. The id-set MUST be monotone across attempts and per-id (`kind`, `run`, `expect_exit`, `path`, `assert`, `sha256`, `job`, `requires`) MUST be field-equal.
-4. **Founder-lane stricter requirement (§6.4):** an issue routed to the founder lane MUST have ≥1 `kind: ci_job` criterion. Rationale: the only independent oracle on the founder lane is GitHub CI.
-5. Acceptance files MUST live at `.orchestrator/acceptance/issue-{N}.yml`. Edits to this path by an agent fix-phase commit are diffed against the prior attempt and rejected if they loosen the gate.
+For render-touching changes. Renders a fixture, then compares to a committed golden.
 
-## Out of scope
+```yaml
+- id: <slug>
+  kind: artifact_oracle
+  render: "<shell command that produces the artifact>"
+  produces: "<repo-relative path to produced artifact>"
+  oracle: frame_hashes | file_sha256
+  golden: ".orchestrator/golden/issue-<N>/<name>"
+  tolerance: 0                      # 0 = exact; >0 = max mismatched frames
+  requires: [chromium, ffmpeg]      # whatever the render needs
+```
 
-- Subjective criteria of any form.
-- Criteria that depend on an agent's self-report or any LLM judgment.
-- Criteria whose result requires human interpretation.
+Golden artifacts under `.orchestrator/golden/**` are PROTECTED — agents may not create or modify them. If no golden exists for a render-touching change, the agent must stop and a human provides the golden.
+
+### `kind: harness_job`
+
+A named local script run by the harness backend.
+
+```yaml
+- id: <slug>
+  kind: harness_job
+  job: "<job name>"                 # script at .orchestrator/harness/<job>.sh
+  requires: []
+```
+
+## What makes auto-merge safe (orchestrator-enforced)
+
+- Every file MUST have ≥1 executed criterion (`command`, `artifact_oracle`, or `harness_job`). File-existence-only is too weak.
+- Render-touching changes (either `render_touching: true` or PR diff touching `harness.render_paths`) MUST contain ≥1 `artifact_oracle` with an existing committed golden, otherwise → FAIL.
+- The PR diff may NOT modify anything under `.orchestrator/golden/**`, `.orchestrator/sequence.yml`, `.orchestrator/config.yml`, `.orchestrator/acceptance/SCHEMA.md`, or `.orchestrator/harness/**` (protected paths).
+- Loosening across attempts (removed criteria, raised tolerance, repointed golden, downgraded kind, dropped requires, relaxed expect_exit) is rejected.
