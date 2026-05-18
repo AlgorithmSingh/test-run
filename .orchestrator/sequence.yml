@@ -14,3 +14,5 @@ sequence:
     requires: [9]
   - issue: 11
     requires: [10]
+  - issue: 15
+    requires: [11]
