@@ -1,5 +1,5 @@
 version: 3
-issue: 4
+issue: 9
 render_touching: false
 criteria:
   - id: hello-4-file-sha256

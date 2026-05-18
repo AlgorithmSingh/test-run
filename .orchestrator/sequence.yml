@@ -8,9 +8,9 @@ sequence:
     requires: [1]
   - issue: 3
     requires: [2]
-  - issue: 4
+  - issue: 9
     requires: [3]
-  - issue: 5
-    requires: [4]
-  - issue: 6
-    requires: [5]
+  - issue: 10
+    requires: [9]
+  - issue: 11
+    requires: [10]
