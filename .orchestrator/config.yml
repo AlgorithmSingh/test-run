@@ -5,17 +5,17 @@ selection:
   mode: "sequence"
   sequence_file: ".orchestrator/sequence.yml"
 
-lanes:
-  cloud:
-    submit_cmd: 'codex cloud exec --env {env} "{prompt}"'
+stages:
+  cloud_build:
+    submit_cmd: 'codex cloud exec --env {repo} "{prompt}"'
     status_cmd: 'codex cloud status {handle}'
-    env_id: ""
-    concurrency: 3
+    concurrency: 1
     poll_interval_sec: 30
     turn_timeout_sec: 5400
     submit_timeout_sec: 120
-  founder:
-    build_cmd: 'claude --dangerously-skip-permissions -p "{prompt}"'
+    dispatch_retries: 3
+  laptop:
+    cmd: 'claude --dangerously-skip-permissions -p "{prompt}"'
     workdir: "/Users/ankitsingh/Documents/Workspace/projects/test-run"
     turn_timeout_sec: 5400
 
@@ -27,14 +27,10 @@ harness:
   render_concurrency: 1
   job_timeout_sec: 3600
   image: ""
-
-review:
-  enabled: false
-  model_must_differ_from_build: true
+  gate_executor: "shell"
 
 retries:
   max_attempts: 4
-  dispatch_retries: 3
   circuit_breaker_threshold: 5
 
 merge:
